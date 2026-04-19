@@ -1,3 +1,4 @@
+import os
 from decimal import Decimal
 import requests
 from django.db import transaction
@@ -37,7 +38,11 @@ class ReservationPricingService:
 class CreateReservationService:
     def __init__(self, payment_provider: str = "fake") -> None:
         self.payment_provider = payment_provider
-        self.payment_service_url = "http://127.0.0.1:5000/api/v2/payments/process"
+        self.payment_service_url = os.getenv(
+            "PAYMENTS_SERVICE_URL",
+            "http://127.0.0.1:5000/api/v2/payments/process",
+        )
+        self.payment_timeout = float(os.getenv("PAYMENTS_HTTP_TIMEOUT", "5"))
 
     @transaction.atomic
     def execute(
@@ -139,7 +144,7 @@ class CreateReservationService:
                     "resource_id": reservation.resource.pk,
                     "payment_provider": self.payment_provider,
                 },
-                timeout=5,
+                timeout=self.payment_timeout,
             )
             response.raise_for_status()
             payment_result = response.json()
