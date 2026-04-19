@@ -3,7 +3,84 @@
 UniReserve es una plataforma digital para la gestión de reservas de espacios y servicios universitarios.  
 El sistema centraliza la administración de recursos académicos y deportivos, permitiendo registrar usuarios, consultar recursos, crear reservas, validar disponibilidad y gestionar cancelaciones.
 
-Este proyecto corresponde a la **Entrega 1: Núcleo de Negocio y Exposición de API Profesional** de la asignatura **Arquitectura de Software**.
+Este proyecto corresponde a:
+
+- **Taller 1 / Entrega 1:** Núcleo de negocio y exposición de API profesional (Django REST Framework).
+- **Taller 2 / Entrega 2:** Migración a microservicios con el **patrón Strangler Fig** (Django + Flask + Nginx + Docker).
+
+> 📖 **Taller 2 – Detalle completo:** ver la Wiki
+> [Migración a Microservicios (Strangler Pattern)](docs/wiki/Migracion-a-Microservicios-Strangler-Pattern.md).
+
+---
+
+# Taller 2 — Migración a Microservicios
+
+## Arquitectura resultante
+
+```
+                    ┌───────────────────────┐
+     Cliente ─────► │   Nginx (puerto 80)   │
+                    └──────────┬────────────┘
+                               │
+             ┌─────────────────┼──────────────────────┐
+             │ /api/, /admin/  │  /api/v2/payments/   │
+             ▼                                        ▼
+   ┌────────────────────┐                  ┌──────────────────────┐
+   │ django_web :8000   │  HTTP  POST      │ flask_microservice   │
+   │ Django + DRF       │ ───────────────► │      :5000           │
+   │ (resources,        │                  │ (procesamiento pago) │
+   │  reservations,     │                  └──────────────────────┘
+   │  admin)            │
+   └────────────────────┘
+```
+
+- **Nginx** enruta `/api/v2/payments/*` → `flask_microservice`; el resto →
+  `django_web`.
+- **Django** sigue siendo el núcleo del dominio y, cuando un recurso es
+  premium, llama al microservicio Flask vía HTTP desde
+  `CreateReservationService._process_payment` (URL configurable con la
+  variable de entorno `PAYMENTS_SERVICE_URL`).
+- **Flask** responde `200 success=true` (gateway `fake`) o `402 success=false`
+  (gateway `rejected`).
+
+## Cómo levantar todo (Docker)
+
+```bash
+docker compose up --build
+```
+
+Puntos de entrada:
+
+| URL                                            | Destino                       |
+|------------------------------------------------|-------------------------------|
+| `http://localhost/`                            | Django vía Nginx              |
+| `http://localhost/admin/`                      | Admin Django                  |
+| `http://localhost/api/resources/`              | API DRF                       |
+| `http://localhost/api/reservations/`           | API DRF                       |
+| `http://localhost/api/v2/payments/process`     | Microservicio Flask           |
+| `http://localhost:8000`                        | Django directo (bypass Nginx) |
+| `http://localhost:5000`                        | Flask directo (bypass Nginx)  |
+
+## Setup mínimo de datos
+
+```bash
+docker compose exec django_web python manage.py createsuperuser
+```
+Luego en `http://localhost/admin/`:
+1. Crear al menos 1 `User` (`role=student`, `account_status=active`).
+2. Crear al menos 1 `Resource` con `is_premium=True` e `is_active=True`
+   (cobro fijo de 25 000, ver `ReservationPricingService`).
+
+Probar el microservicio aislado:
+```bash
+curl -X POST http://localhost/api/v2/payments/process \
+     -H "Content-Type: application/json" \
+     -d '{"user_id":1,"user_email":"a@b.c","amount":25000,"resource_id":1,"payment_provider":"fake"}'
+```
+
+---
+
+# Entrega 1 — Núcleo de Negocio y API Profesional
 
 ---
 
