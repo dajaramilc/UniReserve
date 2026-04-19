@@ -8,9 +8,6 @@ Este proyecto corresponde a:
 - **Taller 1 / Entrega 1:** Núcleo de negocio y exposición de API profesional (Django REST Framework).
 - **Taller 2 / Entrega 2:** Migración a microservicios con el **patrón Strangler Fig** (Django + Flask + Nginx + Docker).
 
-> 📖 **Taller 2 – Detalle completo:** ver la Wiki
-> [Migración a Microservicios (Strangler Pattern)](docs/wiki/Migracion-a-Microservicios-Strangler-Pattern.md).
-
 ---
 
 # Taller 2 — Migración a Microservicios
