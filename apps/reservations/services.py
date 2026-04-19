@@ -1,5 +1,5 @@
 from decimal import Decimal
-
+import requests
 from django.db import transaction
 from django.db.models import Q
 
@@ -14,7 +14,6 @@ from apps.reservations.domain.exceptions import (
     UserNotEligibleError,
     UserNotFoundError,
 )
-from apps.reservations.domain.factories import PaymentGatewayFactory
 from apps.reservations.models import (
     AccountStatus,
     Reservation,
@@ -38,6 +37,7 @@ class ReservationPricingService:
 class CreateReservationService:
     def __init__(self, payment_provider: str = "fake") -> None:
         self.payment_provider = payment_provider
+        self.payment_service_url = "http://127.0.0.1:5000/api/v2/payments/process"
 
     @transaction.atomic
     def execute(
@@ -128,14 +128,27 @@ class CreateReservationService:
             )
 
     def _process_payment(self, reservation: Reservation) -> None:
-        gateway = PaymentGatewayFactory.create(self.payment_provider)
-        payment_response = gateway.charge(
-            amount=float(reservation.total_cost),
-            user_email=reservation.user.email,
-        )
+        """Llama al microservicio Flask para procesar el pago."""
+        try:
+            response = requests.post(
+                self.payment_service_url,
+                json={
+                    "user_id": reservation.user.pk,
+                    "user_email": reservation.user.email,
+                    "amount": float(reservation.total_cost),
+                    "resource_id": reservation.resource.pk,
+                    "payment_provider": self.payment_provider,
+                },
+                timeout=5,
+            )
+            response.raise_for_status()
+            payment_result = response.json()
 
-        if not payment_response["success"]:
-            raise PaymentFailedError(payment_response["message"])
+            if not payment_result.get("success"):
+                raise PaymentFailedError(payment_result.get("message", "Payment failed"))
+
+        except requests.RequestException as exc:
+            raise PaymentFailedError(f"Payment service unavailable: {str(exc)}")
 
 
 class CancelReservationService:
