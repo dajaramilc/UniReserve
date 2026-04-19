@@ -3,6 +3,11 @@
 UniReserve es una plataforma digital para la gestión de reservas de espacios y servicios universitarios.  
 El sistema centraliza la administración de recursos académicos y deportivos, permitiendo registrar usuarios, consultar recursos, crear reservas, validar disponibilidad y gestionar cancelaciones.
 
+## Hecho Por
+Diego Alejandro Jaramillo Calderón
+Samuel David Serpa
+Samuel Salazar Ospina
+
 Este proyecto corresponde a:
 
 - **Taller 1 / Entrega 1:** Núcleo de negocio y exposición de API profesional (Django REST Framework).
